@@ -1,6 +1,6 @@
 # Synology Plex Change Monitor
 
-A lightweight bash script that monitors media directories on a Synology NAS and triggers **targeted partial scans** in Plex when files are added, moved, or deleted. It replaces Plex's built-in filesystem monitoring, which is often unreliable on NAS devices.
+A lightweight bash script that monitors media directories on a Synology NAS and triggers **targeted partial scans** in Plex when files are added, moved, or deleted. It replaces Plex's built-in filesystem monitoring, which is often unreliable over networks.
 
 ## Why?
 
