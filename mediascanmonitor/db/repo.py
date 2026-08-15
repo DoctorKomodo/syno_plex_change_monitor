@@ -18,7 +18,7 @@ from collections.abc import Callable
 from sqlmodel import Session, col, select
 
 from mediascanmonitor.db.crypto import SecretBox
-from mediascanmonitor.db.models import FileType, Folder, Server, Setting
+from mediascanmonitor.db.models import FileType, Folder, Server, Setting, serialize_event_types
 from mediascanmonitor.db.schemas import FolderCreate, FolderUpdate, ServerCreate, ServerUpdate
 from mediascanmonitor.normalize import normalize_extension
 
@@ -71,6 +71,7 @@ class Repo:
                 webhook_headers_json=data.webhook_headers_json,
                 webhook_body_template=data.webhook_body_template,
                 webhook_payload_preset=data.webhook_payload_preset,
+                event_types=serialize_event_types(data.event_types),
             )
             session.add(server)
             session.commit()
@@ -121,6 +122,7 @@ class Repo:
                 webhook_headers_json=server_data.webhook_headers_json,
                 webhook_body_template=server_data.webhook_body_template,
                 webhook_payload_preset=server_data.webhook_payload_preset,
+                event_types=serialize_event_types(server_data.event_types),
             )
             _set_server_folders(server, folders)
             session.add(server)
@@ -136,8 +138,13 @@ class Repo:
             if "secret" in fields:
                 secret = fields.pop("secret")
                 server.secret_encrypted = self._box.encrypt(secret) if secret is not None else None
+            # Mirrors update_folder's "extensions" handling: explicit None is a no-op, same as
+            # omitted — event_types has no "clear via null" semantic ([] already means "none").
+            new_event_types = fields.pop("event_types", None)
             for key, value in fields.items():
                 setattr(server, key, value)
+            if new_event_types is not None:
+                server.event_types = serialize_event_types(new_event_types)
             session.commit()  # server is session-tracked from get(); no add() needed
             return server
 
@@ -159,8 +166,11 @@ class Repo:
             if "secret" in fields:
                 secret = fields.pop("secret")
                 server.secret_encrypted = self._box.encrypt(secret) if secret is not None else None
+            new_event_types = fields.pop("event_types", None)
             for key, value in fields.items():
                 setattr(server, key, value)
+            if new_event_types is not None:
+                server.event_types = serialize_event_types(new_event_types)
             _set_server_folders(server, folders)
             session.commit()  # server is session-tracked from get(); no add() needed
             return server
