@@ -75,6 +75,7 @@ class Server(SQLModel, table=True):
     webhook_headers_json: str | None = None
     webhook_body_template: str | None = None
     webhook_payload_preset: WebhookPreset = WebhookPreset.custom
+    event_types: str = serialize_event_types(FsEventType)  # comma-separated FsEventType values
     folders: list[Folder] = Relationship(
         back_populates="server",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

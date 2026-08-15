@@ -51,6 +51,7 @@ def test_server_defaults() -> None:
     assert server.debounce_window_seconds == 30
     assert server.retry_attempts == 3
     assert server.enabled is True
+    assert server.event_types == "created,moved_to,deleted,moved_from"
 
 
 def test_relationships_persist() -> None:
