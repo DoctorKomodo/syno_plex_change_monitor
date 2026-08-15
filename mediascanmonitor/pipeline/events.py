@@ -6,16 +6,10 @@ where needed.
 """
 
 from dataclasses import dataclass
-from enum import StrEnum
 
-from mediascanmonitor.db.models import ScanMode
+from mediascanmonitor.db.models import FsEventType, ScanMode
 
-
-class FsEventType(StrEnum):
-    created = "created"  # inotify CREATE
-    moved_to = "moved_to"  # inotify MOVED_TO
-    deleted = "deleted"  # inotify DELETE
-    moved_from = "moved_from"  # inotify MOVED_FROM
+__all__ = ["FsEventType", "FsEvent", "ScanRequest"]
 
 
 @dataclass(frozen=True, slots=True)

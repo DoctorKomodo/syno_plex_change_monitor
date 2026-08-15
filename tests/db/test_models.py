@@ -8,10 +8,13 @@ from mediascanmonitor.db.models import (
     DebounceMode,
     FileType,
     Folder,
+    FsEventType,
     ScanMode,
     Server,
     ServerType,
     Setting,
+    parse_event_types,
+    serialize_event_types,
 )
 
 
@@ -97,3 +100,35 @@ def test_setting_table_round_trips() -> None:
         row = session.get(Setting, "inotify_gate")
         assert row is not None
         assert row.value == "enforce"
+
+
+def test_fs_event_type_values_and_order() -> None:
+    assert FsEventType.created.value == "created"
+    assert FsEventType.moved_to.value == "moved_to"
+    assert FsEventType.deleted.value == "deleted"
+    assert FsEventType.moved_from.value == "moved_from"
+    assert list(FsEventType) == [
+        FsEventType.created,
+        FsEventType.moved_to,
+        FsEventType.deleted,
+        FsEventType.moved_from,
+    ]
+
+
+def test_serialize_event_types_joins_values_with_commas() -> None:
+    assert serialize_event_types([FsEventType.deleted, FsEventType.created]) == "deleted,created"
+
+
+def test_serialize_event_types_of_full_enum_matches_declaration_order() -> None:
+    # This exact string is what migration 0004's server_default must equal (Task 2).
+    assert serialize_event_types(FsEventType) == "created,moved_to,deleted,moved_from"
+
+
+def test_parse_event_types_round_trips() -> None:
+    assert parse_event_types("created,deleted") == frozenset(
+        {FsEventType.created, FsEventType.deleted}
+    )
+
+
+def test_parse_event_types_empty_string_yields_empty_set() -> None:
+    assert parse_event_types("") == frozenset()
