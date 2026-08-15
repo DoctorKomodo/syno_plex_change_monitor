@@ -606,6 +606,8 @@ pre code { border: 0; background: none; padding: 0; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
+  white-space: nowrap; /* a flex item's text can otherwise shrink below its natural
+                           width and wrap mid-phrase even with room to spare in the row */
 }
 .toggle-lg:has(input:checked) { color: var(--ok); border-color: var(--signal-dim); }
 

@@ -139,18 +139,19 @@
              value="{{ 30 if creating else server.debounce_window_seconds }}">
       <span class="field-hint">seconds — collapse a burst into one trigger</span>
     </label>
-    <div class="field field-event-types">
-      <span class="field-label">Event types</span>
-      <div class="toggles">
-        {% for value, label in event_type_options %}
-        <label class="toggle">
-          <input type="checkbox" name="event_types" value="{{ value.value }}"
-            {% if creating or value in server.event_types %}checked{% endif %}>
-          {{ label }}
-        </label>
-        {% endfor %}
-      </div>
+  </div>
+  <div class="field field-event-types">
+    <span class="field-label">Event types</span>
+    <div class="toggles">
+      {% for value, label in event_type_options %}
+      <label class="toggle toggle-lg">
+        <input type="checkbox" name="event_types" value="{{ value.value }}"
+          {% if creating or value in server.event_types %}checked{% endif %}>
+        <span>{{ label }}</span>
+      </label>
+      {% endfor %}
     </div>
+    <span class="field-hint">all unchecked = server receives nothing</span>
   </div>
 </fieldset>
 
