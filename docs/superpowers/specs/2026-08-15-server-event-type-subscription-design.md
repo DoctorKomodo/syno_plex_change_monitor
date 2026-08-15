@@ -112,13 +112,28 @@ alongside the other direct field assignments.
 `update_server` / `update_server_with_folders` currently do a blanket
 `for key, value in fields.items(): setattr(server, key, value)` over
 `data.model_dump(exclude_unset=True)` — a bare `list[FsEventType]` would be set directly onto
-the `str` column, which is wrong. Special-case it the same way `secret` already is: pop it
-before the loop, convert, then assign directly:
+the `str` column, which is wrong. `ServerUpdate.event_types` is typed `list[FsEventType] | None
+= None` (the same optional-field shape `FolderUpdate.extensions` already uses), so an explicit
+JSON `{"event_types": null}` on the `PATCH /api/servers/{id}` route reaches the repo as
+`None`, same as an omitted field. Special-case it the same way `update_folder` already
+special-cases `extensions` (`db/repo.py:209-221`, comment: *"explicit None is a no-op"*) — pop
+it before the loop, and only convert/assign when a real list was sent:
 
 ```python
-if "event_types" in fields:
-    server.event_types = serialize_event_types(fields.pop("event_types"))
+new_event_types = fields.pop("event_types", None)
+for key, value in fields.items():
+    setattr(server, key, value)
+if new_event_types is not None:
+    server.event_types = serialize_event_types(new_event_types)
 ```
+
+This is a deliberate choice, not an oversight: it's the same tri-state precedent already used
+for `extensions` in this codebase, applied consistently rather than inventing a new
+null-rejection error path for this one field. (An earlier draft of this spec special-cased
+`event_types` the same way `secret` is special-cased — `secret: None` legitimately means
+"clear it" — but `event_types` has no such "clear via null" semantic; `[]` already means
+"subscribe to nothing," so treating explicit null as a no-op, matching `extensions`, is the
+correct precedent to follow, not `secret`.)
 
 ### `ServerRead` (`web/api_schemas.py`)
 
@@ -219,7 +234,9 @@ in the saved `server.event_types`.
   behaves as today; empty `event_types` matches nothing.
 - **schema/repo:** `ServerCreate`/`ServerUpdate` round-trip `event_types` through
   `create_server`/`update_server`; default on create is all four; update can narrow to a subset
-  and later widen back; empty list round-trips as empty (not silently defaulted).
+  and later widen back; empty list round-trips as empty (not silently defaulted); an explicit
+  `event_types=None` passed to `update_server` (simulating a JSON `null`) is a no-op and leaves
+  the stored value unchanged, mirroring the existing `extensions`-null test coverage.
 - **migration:** extend `tests/db/test_migrations.py` mirroring
   `test_server_table_has_webhook_payload_preset_column` /
   `test_webhook_payload_preset_server_default_is_custom` — assert the `event_types` column
