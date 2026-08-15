@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from mediascanmonitor.db.models import DebounceMode, ScanMode, ServerType
+from mediascanmonitor.db.models import DebounceMode, FsEventType, ScanMode, ServerType
 from mediascanmonitor.db.schemas import FolderCreate, ServerCreate, ServerUpdate
 
 
@@ -18,6 +18,7 @@ def test_server_create_defaults() -> None:
     assert s.debounce_window_seconds == 30
     assert s.retry_attempts == 3
     assert s.enabled is True
+    assert s.event_types == list(FsEventType)
 
 
 def test_server_create_accepts_plaintext_secret() -> None:
@@ -51,6 +52,26 @@ def test_server_update_tracks_only_set_fields() -> None:
     # explicit secret=None is distinct from omitting it: it clears the stored credential
     cleared = ServerUpdate(secret=None)
     assert cleared.model_dump(exclude_unset=True) == {"secret": None}
+
+
+def test_server_create_narrows_event_types() -> None:
+    s = ServerCreate(
+        name="hook",
+        type=ServerType.webhook,
+        event_types=[FsEventType.created, FsEventType.moved_to],
+    )
+    assert s.event_types == [FsEventType.created, FsEventType.moved_to]
+
+
+def test_server_update_event_types_defaults_to_none() -> None:
+    u = ServerUpdate()
+    assert u.event_types is None
+    assert "event_types" not in u.model_dump(exclude_unset=True)
+
+
+def test_server_update_event_types_tracked_when_set() -> None:
+    u = ServerUpdate(event_types=[FsEventType.deleted])
+    assert u.model_dump(exclude_unset=True) == {"event_types": [FsEventType.deleted]}
 
 
 def test_folder_create_defaults() -> None:
