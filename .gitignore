@@ -33,3 +33,6 @@ dev-data-serve.log
 
 # Playwright MCP scratch output (browser smoke runs)
 .playwright-mcp/
+
+# Local git worktrees (superpowers:using-git-worktrees)
+.worktrees/

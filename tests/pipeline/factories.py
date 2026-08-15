@@ -1,7 +1,13 @@
 from collections.abc import Iterable
 
 from mediascanmonitor.config.runtime import FolderRoute, RuntimeConfig, ServerRuntime
-from mediascanmonitor.db.models import DebounceMode, ScanMode, ServerType, WebhookPreset
+from mediascanmonitor.db.models import (
+    DebounceMode,
+    FsEventType,
+    ScanMode,
+    ServerType,
+    WebhookPreset,
+)
 
 
 def make_server_runtime(
@@ -40,6 +46,7 @@ def make_folder_route(
     extensions: frozenset[str] = frozenset({"mkv"}),
     library_id: str | None = "2",
     scan_mode: ScanMode = ScanMode.targeted,
+    event_types: frozenset[FsEventType] = frozenset(FsEventType),
 ) -> FolderRoute:
     return FolderRoute(
         server_id=server_id,
@@ -48,6 +55,7 @@ def make_folder_route(
         extensions=extensions,
         library_id=library_id,
         scan_mode=scan_mode,
+        event_types=event_types,
     )
 
 

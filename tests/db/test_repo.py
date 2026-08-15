@@ -52,6 +52,39 @@ def test_create_server_with_folders_persists_both(repo: Repo) -> None:
     assert sorted(ft.extension for ft in tv.filetypes) == ["mkv", "mp4"]  # normalized + deduped
 
 
+def test_create_server_defaults_event_types_to_all_four(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+
+    server = repo.create_server(make_server(name="all-events"))
+    assert server.event_types == "created,moved_to,deleted,moved_from"
+    assert server.event_types == ",".join(t.value for t in FsEventType)
+
+
+def test_create_server_persists_narrowed_event_types(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+    from mediascanmonitor.db.schemas import ServerCreate as SC
+
+    created = repo.create_server(
+        SC(
+            name="hook-narrow",
+            type=ServerType.webhook,
+            event_types=[FsEventType.created, FsEventType.moved_to],
+        )
+    )
+    assert created.event_types == "created,moved_to"
+
+
+def test_create_server_with_folders_persists_event_types(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+    from mediascanmonitor.db.schemas import ServerCreate as SC
+
+    server = repo.create_server_with_folders(
+        SC(name="combined-events", type=ServerType.plex, event_types=[FsEventType.deleted]),
+        [],
+    )
+    assert server.event_types == "deleted"
+
+
 def test_update_server_with_folders_changes_fields_and_swaps_folders(repo: Repo) -> None:
     server = repo.create_server_with_folders(
         make_server(name="combo"), [FolderCreate(path="/old", extensions=["avi"])]
@@ -70,6 +103,17 @@ def test_update_server_with_folders_changes_fields_and_swaps_folders(repo: Repo)
     assert {f.path for f in folders} == {"/data/tv", "/data/movies"}  # /old replaced wholesale
     tv = next(f for f in folders if f.path == "/data/tv")
     assert sorted(ft.extension for ft in tv.filetypes) == ["mkv", "mp4"]  # normalized + deduped
+
+
+def test_update_server_with_folders_narrows_event_types(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+
+    server = repo.create_server(make_server(name="combo"))
+    assert server.id is not None
+    updated = repo.update_server_with_folders(
+        server.id, ServerUpdate(event_types=[FsEventType.moved_from]), []
+    )
+    assert updated.event_types == "moved_from"
 
 
 def test_update_server_with_folders_empty_clears_all(repo: Repo) -> None:
@@ -146,6 +190,40 @@ def test_update_server_clears_secret_when_explicitly_none(repo: Repo) -> None:
     updated = repo.update_server(server.id, ServerUpdate(secret=None))
     assert updated.secret_encrypted is None
     assert repo.resolve_secret(updated) is None
+
+
+def test_update_server_narrows_event_types(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+
+    server = repo.create_server(make_server())
+    assert server.id is not None
+    updated = repo.update_server(server.id, ServerUpdate(event_types=[FsEventType.created]))
+    assert updated.event_types == "created"
+
+
+def test_update_server_empty_event_types_clears(repo: Repo) -> None:
+    server = repo.create_server(make_server())
+    assert server.id is not None
+    updated = repo.update_server(server.id, ServerUpdate(event_types=[]))
+    assert updated.event_types == ""
+
+
+def test_update_server_omitted_event_types_unchanged(repo: Repo) -> None:
+    server = repo.create_server(make_server())
+    assert server.id is not None
+    before = server.event_types
+    updated = repo.update_server(server.id, ServerUpdate(base_url="https://new:32400"))
+    assert updated.event_types == before
+
+
+def test_update_server_explicit_none_event_types_is_noop(repo: Repo) -> None:
+    # Mirrors update_folder's "explicit None is a no-op" contract for extensions (contract
+    # section 4) — a JSON PATCH sending `{"event_types": null}` must not crash or clear anything.
+    server = repo.create_server(make_server())
+    assert server.id is not None
+    before = server.event_types
+    updated = repo.update_server(server.id, ServerUpdate(event_types=None))
+    assert updated.event_types == before
 
 
 def test_delete_server_cascades_to_folders_and_filetypes(

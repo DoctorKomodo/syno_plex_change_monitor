@@ -11,6 +11,7 @@ real classes when the mappers configure. The PEP 563 future import would instead
 annotation to ``"list['Folder']"`` and break mapper configuration.
 """
 
+from collections.abc import Iterable
 from enum import StrEnum
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -39,6 +40,23 @@ class WebhookPreset(StrEnum):
     sonarr_radarr = "sonarr_radarr"  # subtitle-pruner-compatible payload
 
 
+class FsEventType(StrEnum):
+    created = "created"  # inotify CREATE
+    moved_to = "moved_to"  # inotify MOVED_TO
+    deleted = "deleted"  # inotify DELETE
+    moved_from = "moved_from"  # inotify MOVED_FROM
+
+
+def serialize_event_types(types: Iterable[FsEventType]) -> str:
+    """Join event types into the comma-separated form ``Server.event_types`` stores."""
+    return ",".join(t.value for t in types)
+
+
+def parse_event_types(raw: str) -> frozenset[FsEventType]:
+    """Inverse of ``serialize_event_types``. An empty string parses to an empty set."""
+    return frozenset(FsEventType(v) for v in raw.split(",") if v)
+
+
 class Server(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True, unique=True)
@@ -57,6 +75,7 @@ class Server(SQLModel, table=True):
     webhook_headers_json: str | None = None
     webhook_body_template: str | None = None
     webhook_payload_preset: WebhookPreset = WebhookPreset.custom
+    event_types: str = serialize_event_types(FsEventType)  # comma-separated FsEventType values
     folders: list[Folder] = Relationship(
         back_populates="server",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

@@ -126,3 +126,32 @@ def test_route_carries_event_context() -> None:
     assert req.event_type is FsEventType.created
     assert req.file_path == "/data/tv/Shoresy/ep.mkv"
     assert req.server_name == "plex-1"
+
+
+# --- route: event_types subscription -----------------------------------------
+
+
+def test_route_excludes_server_not_subscribed_to_event_type() -> None:
+    route_created_only = make_folder_route(
+        server_id=1, server_name="hook", event_types=frozenset({FsEventType.created})
+    )
+    config = make_runtime_config([route_created_only])
+
+    deleted_event = FsEvent(path="/data/tv/ep.mkv", event_type=FsEventType.deleted, is_dir=False)
+    assert route(deleted_event, config) == []
+
+
+def test_route_includes_server_subscribed_to_event_type() -> None:
+    route_created_only = make_folder_route(
+        server_id=1, server_name="hook", event_types=frozenset({FsEventType.created})
+    )
+    config = make_runtime_config([route_created_only])
+
+    reqs = route(_event("/data/tv/ep.mkv"), config)  # _event() defaults to FsEventType.created
+    assert {r.server_id for r in reqs} == {1}
+
+
+def test_route_empty_event_types_matches_nothing() -> None:
+    route_none = make_folder_route(server_id=1, server_name="hook", event_types=frozenset())
+    config = make_runtime_config([route_none])
+    assert route(_event("/data/tv/ep.mkv"), config) == []

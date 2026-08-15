@@ -58,6 +58,52 @@ def test_ui_create_server_with_folders_redirects_and_persists(
     assert by_path["/data/movies"].enabled is False
 
 
+def test_ui_create_server_persists_narrowed_event_types(
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
+) -> None:
+    resp = auth_client.post(
+        "/ui/servers/new",
+        data={
+            "name": "Webhook Created Only",
+            "type": "webhook",
+            "scan_mode": "library",
+            "debounce_mode": "off",
+            "debounce_window_seconds": "30",
+            "retry_attempts": "3",
+            "timeout_seconds": "10",
+            "event_types": ["created", "moved_to"],
+            "folder-0-path": "",
+        },
+    )
+    assert resp.status_code == 204
+    created = next(s for s in repo.list_servers() if s.name == "Webhook Created Only")
+    assert created.event_types == "created,moved_to"
+
+
+def test_ui_create_server_with_no_event_types_checked_saves_empty(
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
+) -> None:
+    resp = auth_client.post(
+        "/ui/servers/new",
+        data={
+            "name": "No Events Yet",
+            "type": "webhook",
+            "scan_mode": "library",
+            "debounce_mode": "off",
+            "debounce_window_seconds": "30",
+            "retry_attempts": "3",
+            "timeout_seconds": "10",
+            # no "event_types" key: every checkbox unchecked
+            "folder-0-path": "",
+        },
+    )
+    assert resp.status_code == 204
+    created = next(s for s in repo.list_servers() if s.name == "No Events Yet")
+    assert created.event_types == ""
+
+
 def test_ui_create_server_with_folders_rejects_missing_token_atomically(
     auth_client: httpx.Client,
     repo,
@@ -257,6 +303,50 @@ def test_ui_update_saves_fields_and_folders_together(
     assert saved.name == "Plex Renamed"
     assert saved.secret_encrypted is not None  # blank secret left the token intact
     assert {f.path for f in repo.list_folders(sid)} == {"/data/tv", "/data/movies"}  # /old gone
+
+
+def test_ui_update_replaces_event_types_from_checked_boxes(
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
+) -> None:
+    sid = _seed_plex(repo)
+    resp = auth_client.post(
+        f"/ui/servers/{sid}/update",
+        data={
+            "name": "Plex",
+            "scan_mode": "targeted",
+            "debounce_mode": "trailing",
+            "debounce_window_seconds": "30",
+            "retry_attempts": "3",
+            "timeout_seconds": "10",
+            "event_types": ["deleted"],
+            "folder-0-path": "",
+        },
+    )
+    assert resp.status_code == 200
+    assert repo.get_server(sid).event_types == "deleted"
+
+
+def test_ui_update_unchecking_all_event_types_clears_them(
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
+) -> None:
+    sid = _seed_plex(repo)
+    resp = auth_client.post(
+        f"/ui/servers/{sid}/update",
+        data={
+            "name": "Plex",
+            "scan_mode": "targeted",
+            "debounce_mode": "trailing",
+            "debounce_window_seconds": "30",
+            "retry_attempts": "3",
+            "timeout_seconds": "10",
+            # no "event_types" key: every checkbox unchecked, same as a real all-unchecked submit
+            "folder-0-path": "",
+        },
+    )
+    assert resp.status_code == 200
+    assert repo.get_server(sid).event_types == ""
 
 
 def test_ui_update_empty_folder_rows_clears_all(

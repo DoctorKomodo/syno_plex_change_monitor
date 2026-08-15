@@ -88,8 +88,10 @@ mediascanmonitor/
   Plex, Emby, Jellyfin, or Audiobookshelf target. Each folder declares the host path watched,
   the backend library/section id, and which file extensions to monitor.
 - **Routing:** the watch set is the deduplicated union of all enabled folder paths. On a
-  filesystem event, every `(server, folder)` whose path is a prefix of the changed file **and**
-  whose extensions match becomes a *subscriber*; the event fans out to each.
+  filesystem event, every `(server, folder)` whose path is a prefix of the changed file, whose
+  extensions match, **and** whose server is subscribed to the event's type (`created`/
+  `moved_to`/`deleted`/`moved_from`, default: all four) becomes a *subscriber*; the event fans
+  out to each.
 - **Per-server debounce:** each server has its own policy applied *after* routing. `off` =
   deliver every matching event (e.g. a generic webhook wants the full stream); `trailing` =
   collapse a burst keyed per `(server_id, scan_key)` into one trigger (media-server default).

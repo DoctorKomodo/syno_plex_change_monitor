@@ -16,6 +16,7 @@ from mediascanmonitor.db.models import (
     DebounceMode,
     FileType,
     Folder,
+    FsEventType,
     ScanMode,
     Server,
     ServerType,
@@ -82,9 +83,11 @@ def test_folder_route_fields_frozen_slotted() -> None:
         extensions=frozenset({"mkv", "srt"}),
         library_id="2",
         scan_mode=ScanMode.targeted,
+        event_types=frozenset(FsEventType),
     )
     assert fr.path == "/data/media/tv"
     assert fr.extensions == frozenset({"mkv", "srt"})
+    assert fr.event_types == frozenset(FsEventType)
     assert not hasattr(fr, "__dict__")
     with pytest.raises(dataclasses.FrozenInstanceError):
         fr.path = "/elsewhere"  # type: ignore[misc]
@@ -115,6 +118,7 @@ def test_runtime_config_fields_frozen_slotted() -> None:
         extensions=frozenset(),
         library_id="2",
         scan_mode=ScanMode.targeted,
+        event_types=frozenset(FsEventType),
     )
     cfg = RuntimeConfig(
         watch_paths=frozenset({"/data/media/tv"}),
@@ -165,6 +169,7 @@ def make_server(
     debounce_mode: DebounceMode = DebounceMode.trailing,
     enabled: bool = True,
     webhook_payload_preset: WebhookPreset = WebhookPreset.custom,
+    event_types: str = "created,moved_to,deleted,moved_from",
 ) -> Server:
     return Server(
         id=server_id,
@@ -180,6 +185,7 @@ def make_server(
         retry_attempts=3,
         enabled=enabled,
         webhook_payload_preset=webhook_payload_preset,
+        event_types=event_types,
     )
 
 
@@ -237,6 +243,7 @@ def test_build_runtime_config_happy_path() -> None:
     assert route.extensions == frozenset({"mkv", "srt"})
     assert route.library_id == "2"
     assert route.scan_mode is ScanMode.targeted
+    assert route.event_types == frozenset(FsEventType)
 
     # Watch set is the normalized path; ignore dirs come from defaults.
     assert cfg.watch_paths == frozenset({"/data/media/tv"})
@@ -337,3 +344,13 @@ def test_build_runtime_config_carries_webhook_payload_preset() -> None:
     cfg = build_runtime_config(cast("Repo", repo))
 
     assert cfg.servers[1].webhook_payload_preset == WebhookPreset.sonarr_radarr
+
+
+def test_build_runtime_config_carries_narrowed_event_types() -> None:
+    server = make_server(1, name="hook", event_types="created,deleted")
+    folder = make_folder(10, server_id=1, path="/data/tv", library_id="2", extensions=["mkv"])
+    repo = FakeRepo(servers=[server], folders_by_server={1: [folder]}, secrets={1: None})
+
+    cfg = build_runtime_config(cast("Repo", repo))
+
+    assert cfg.routes[0].event_types == frozenset({FsEventType.created, FsEventType.deleted})

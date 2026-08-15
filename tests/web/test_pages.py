@@ -283,3 +283,43 @@ def test_webhook_preset_toggle_script_present(auth_client: httpx.Client) -> None
     body = auth_client.get("/servers/new").text
     assert "webhook-preset-select" in body  # the select id the toggle script binds to
     assert "field-webhook-body" in body  # the element it shows/hides
+
+
+def test_new_server_form_renders_all_four_event_type_checkboxes_checked(
+    auth_client: httpx.Client,
+) -> None:
+    import re
+
+    body = auth_client.get("/servers/new").text
+    for value in ("created", "moved_to", "deleted", "moved_from"):
+        assert re.search(rf'name="event_types" value="{value}"[^>]*\bchecked\b', body), value
+
+
+def test_server_detail_preselects_saved_event_types(
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
+) -> None:
+    import re
+
+    from mediascanmonitor.db.models import FsEventType
+
+    server = repo.create_server(
+        ServerCreate(
+            name="hook-events",
+            type=ServerType.webhook,
+            event_types=[FsEventType.created, FsEventType.deleted],
+        )
+    )
+    body = auth_client.get(f"/servers/{server.id}").text
+    assert re.search(r'name="event_types" value="created"[^>]*\bchecked\b', body)
+    assert re.search(r'name="event_types" value="deleted"[^>]*\bchecked\b', body)
+    assert not re.search(r'name="event_types" value="moved_to"[^>]*\bchecked\b', body)
+    assert not re.search(r'name="event_types" value="moved_from"[^>]*\bchecked\b', body)
+
+
+def test_event_type_labels_cover_every_fs_event_type() -> None:
+    from mediascanmonitor.db.models import FsEventType
+    from mediascanmonitor.web.pages import _EVENT_TYPE_LABELS
+
+    assert set(_EVENT_TYPE_LABELS) == set(FsEventType)
+    assert list(_EVENT_TYPE_LABELS) == list(FsEventType)  # pins checkbox order to declaration order

@@ -61,6 +61,24 @@ def test_server_read_supported_scan_modes_from_registry(repo: Repo) -> None:
     assert read.supported_scan_modes == [ScanMode.library]
 
 
+def test_server_read_carries_event_types_in_declaration_order(repo: Repo) -> None:
+    from mediascanmonitor.db.models import FsEventType
+    from mediascanmonitor.db.schemas import ServerCreate
+
+    server = repo.create_server(
+        ServerCreate(
+            name="narrow-events",
+            type=ServerType.plex,
+            base_url="https://plex:32400",
+            secret="tok",
+            # deliberately out of declaration order, to prove from_model re-sorts
+            event_types=[FsEventType.deleted, FsEventType.created],
+        )
+    )
+    read = ServerRead.from_model(server, [])
+    assert read.event_types == [FsEventType.created, FsEventType.deleted]
+
+
 def test_server_read_includes_folders(repo: Repo) -> None:
     server_id, folder_id = _seed(repo)
     server = repo.get_server(server_id)

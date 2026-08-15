@@ -23,7 +23,7 @@ import json
 import os
 import re
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -31,7 +31,13 @@ from fastapi.templating import Jinja2Templates
 from starlette.datastructures import FormData
 from starlette.responses import Response
 
-from mediascanmonitor.db.models import DebounceMode, ScanMode, ServerType, WebhookPreset
+from mediascanmonitor.db.models import (
+    DebounceMode,
+    FsEventType,
+    ScanMode,
+    ServerType,
+    WebhookPreset,
+)
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.db.schemas import FolderCreate, ServerCreate, ServerUpdate
 from mediascanmonitor.engine import Engine
@@ -101,6 +107,14 @@ def _scan_modes_by_type() -> dict[str, list[str]]:
         )
         for server_type in ServerType
     }
+
+
+_EVENT_TYPE_LABELS: dict[FsEventType, str] = {
+    FsEventType.created: "Created",
+    FsEventType.moved_to: "Moved in",
+    FsEventType.deleted: "Deleted",
+    FsEventType.moved_from: "Moved out",
+}
 
 
 def _webhook_preset_options() -> list[tuple[str, str]]:
@@ -183,6 +197,7 @@ async def server_new_page(
             "server_types": [t.value for t in ServerType],
             "scan_modes": [m.value for m in ScanMode],
             "debounce_modes": [m.value for m in DebounceMode],
+            "event_type_options": list(_EVENT_TYPE_LABELS.items()),
             "type_specs": _type_specs(),
             "scan_modes_by_type": _scan_modes_by_type(),
             "webhook_presets": _webhook_preset_options(),
@@ -219,6 +234,7 @@ async def server_detail(
             "creating": False,
             "server": server,
             "debounce_modes": [m.value for m in DebounceMode],
+            "event_type_options": list(_EVENT_TYPE_LABELS.items()),
             "is_webhook": SERVER_TYPE_SPECS[server.type].is_webhook,
             "base_url_label": SERVER_TYPE_SPECS[server.type].base_url_label,
             "base_url_placeholder": SERVER_TYPE_SPECS[server.type].base_url_placeholder,
@@ -408,6 +424,7 @@ async def ui_create_server_with_folders(
             webhook_headers_json=webhook_headers_json or None,
             webhook_body_template=webhook_body_template or None,
             webhook_payload_preset=webhook_payload_preset,
+            event_types=[FsEventType(cast(str, v)) for v in form.getlist("event_types")],
         )
         folders = _parse_folder_rows(form)
         server = await apply_server_create_with_folders(repo, engine, server_data, folders)
@@ -584,6 +601,7 @@ async def ui_update_server(
             "webhook_headers_json": webhook_headers_json or None,
             "webhook_body_template": webhook_body_template or None,
             "webhook_payload_preset": webhook_payload_preset,
+            "event_types": [FsEventType(cast(str, v)) for v in form.getlist("event_types")],
         }
         # Secret tri-state: leave "secret" out of fields to keep the stored token, or set None to
         # clear it; the write-core's exclude_unset dump reads absent=keep, explicit None=clear.

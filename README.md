@@ -35,14 +35,17 @@ inotify watcher ──> router ──> per-server debounce ──> dispatcher �
     recursive)          │             └─ collapse a burst (e.g. copying    Audiobookshelf,
                         │                a whole season) into one trigger  or webhook)
                         └─ fan out to every (server, folder) whose path
-                           prefixes the change and whose extensions match
+                           prefixes the change, whose extensions match, and
+                           whose server is subscribed to the event's type
 ```
 
 - **Domain model:** `Server (1) ──< Folder (N) ──< FileType (N)`. Each folder declares the
   host path to watch, the backend library/section id, and which file extensions to monitor.
 - **Routing:** the watch set is the deduplicated union of all enabled folder paths. On an
-  event, every `(server, folder)` whose path is a segment-prefix of the changed file *and*
-  whose extensions match becomes a subscriber; the event fans out to each.
+  event, every `(server, folder)` whose path is a segment-prefix of the changed file, whose
+  extensions match, *and* whose server is subscribed to the event's type (`created`/
+  `moved_to`/`deleted`/`moved_from`, default: all four) becomes a subscriber; the event fans
+  out to each.
 - **Per-server debounce:** `trailing` collapses a burst per `(server, scan target)` into one
   trigger after the folder settles (media-server default); `off` delivers every event (good
   for a generic webhook).
@@ -129,6 +132,11 @@ In the web UI:
    (`eventType` + `instanceName` + `file_path`) compatible with apps that ingest Sonarr/Radarr
    webhooks (e.g. subtitle-pruner). The Test button sends that preset's payload with
    `eventType: "Test"` so the receiver can recognise it as a probe.
+
+   Every server also has an **Event types** control: checkboxes for Created / Moved in /
+   Deleted / Moved out, deciding which filesystem event types trigger a scan for that server.
+   All four are checked by default. A generic webhook that only cares about new files, for
+   example, can uncheck Deleted and Moved out.
 
 2. On the server detail page, add a **Folder**: the path inside the container
    (e.g. `/data/media/tv`), the library/section ID that server uses for it,

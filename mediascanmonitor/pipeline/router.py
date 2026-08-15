@@ -32,9 +32,10 @@ def route(event: FsEvent, config: RuntimeConfig) -> list[ScanRequest]:
     """Map a filesystem event to one ``ScanRequest`` per matching ``(server, folder)`` route.
 
     A route matches when its ``path`` is a segment-prefix of ``event.path``, the event path is
-    not inside an ignored directory, and the file extension matches the route's extension set
-    (empty set => all). ``scan_path``/``top_folder``/``scan_key`` are computed per the route's
-    ``scan_mode`` (invariant 2).
+    not inside an ignored directory, the file extension matches the route's extension set (empty
+    set => all), and the route's server is subscribed to the event's type (empty set => none).
+    ``scan_path``/``top_folder``/``scan_key`` are computed per the route's ``scan_mode``
+    (invariant 2).
     """
     if is_ignored(event.path, config.ignore_dirs):
         return []
@@ -44,6 +45,8 @@ def route(event: FsEvent, config: RuntimeConfig) -> list[ScanRequest]:
         if not _is_path_prefix(folder_route.path, event.path):
             continue
         if not extension_matches(event.path, folder_route.extensions):
+            continue
+        if event.event_type not in folder_route.event_types:
             continue
 
         if folder_route.scan_mode is ScanMode.targeted:
