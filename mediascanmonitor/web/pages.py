@@ -109,6 +109,14 @@ def _scan_modes_by_type() -> dict[str, list[str]]:
     }
 
 
+_EVENT_TYPE_LABELS: dict[FsEventType, str] = {
+    FsEventType.created: "Created",
+    FsEventType.moved_to: "Moved in",
+    FsEventType.deleted: "Deleted",
+    FsEventType.moved_from: "Moved out",
+}
+
+
 def _webhook_preset_options() -> list[tuple[str, str]]:
     """(value, label) for the webhook payload-preset <select>: Custom first, then the registry."""
     options: list[tuple[str, str]] = [(WebhookPreset.custom.value, "Custom")]
@@ -189,6 +197,7 @@ async def server_new_page(
             "server_types": [t.value for t in ServerType],
             "scan_modes": [m.value for m in ScanMode],
             "debounce_modes": [m.value for m in DebounceMode],
+            "event_type_options": list(_EVENT_TYPE_LABELS.items()),
             "type_specs": _type_specs(),
             "scan_modes_by_type": _scan_modes_by_type(),
             "webhook_presets": _webhook_preset_options(),
@@ -225,6 +234,7 @@ async def server_detail(
             "creating": False,
             "server": server,
             "debounce_modes": [m.value for m in DebounceMode],
+            "event_type_options": list(_EVENT_TYPE_LABELS.items()),
             "is_webhook": SERVER_TYPE_SPECS[server.type].is_webhook,
             "base_url_label": SERVER_TYPE_SPECS[server.type].base_url_label,
             "base_url_placeholder": SERVER_TYPE_SPECS[server.type].base_url_placeholder,
