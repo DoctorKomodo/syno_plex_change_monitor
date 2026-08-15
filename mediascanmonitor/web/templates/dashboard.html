@@ -48,7 +48,8 @@
       const r = JSON.parse(e.data);
       const li = document.createElement("li");
       li.className = "event event-" + (r.ok ? "ok" : "fail");
-      li.textContent = r.ts + "  [" + r.server_name + "] " + r.event_type + " " + r.file_path +
+      // r.ts is a UTC ISO timestamp; render it in the viewer's local timezone.
+      li.textContent = new Date(r.ts).toLocaleString() + "  [" + r.server_name + "] " + r.event_type + " " + r.file_path +
         "  -> " + (r.ok ? "ok" : "FAIL") + (r.detail ? " (" + r.detail + ")" : "");
       feed.insertBefore(li, feed.firstChild);
       while (feed.children.length > 50) { feed.removeChild(feed.lastChild); }

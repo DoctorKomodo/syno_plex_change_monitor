@@ -18,7 +18,8 @@
       const li = document.createElement("li");
       const ok = r.ok ? "ok" : "fail";
       li.className = "event event-" + ok;
-      li.textContent = r.ts + "  [" + r.server_name + "] " + r.event_type + " " + r.file_path +
+      // r.ts is a UTC ISO timestamp; render it in the viewer's local timezone.
+      li.textContent = new Date(r.ts).toLocaleString() + "  [" + r.server_name + "] " + r.event_type + " " + r.file_path +
         "  -> " + (r.ok ? "ok" : "FAIL") + (r.detail ? " (" + r.detail + ")" : "");
       feed.insertBefore(li, feed.firstChild);
     };
