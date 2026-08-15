@@ -8,7 +8,14 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from mediascanmonitor.config.defaults import IGNORE_DIRS
-from mediascanmonitor.db.models import DebounceMode, ScanMode, ServerType, WebhookPreset
+from mediascanmonitor.db.models import (
+    DebounceMode,
+    FsEventType,
+    ScanMode,
+    ServerType,
+    WebhookPreset,
+    parse_event_types,
+)
 from mediascanmonitor.normalize import normalize_extension, normalize_path
 
 if TYPE_CHECKING:
@@ -42,6 +49,7 @@ class FolderRoute:
     extensions: frozenset[str]  # normalized; EMPTY SET MEANS "match all extensions"
     library_id: str | None
     scan_mode: ScanMode
+    event_types: frozenset[FsEventType]
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +102,7 @@ def build_runtime_config(repo: Repo) -> RuntimeConfig:
                     ),
                     library_id=folder.library_id,
                     scan_mode=server.scan_mode,
+                    event_types=parse_event_types(server.event_types),
                 )
             )
 

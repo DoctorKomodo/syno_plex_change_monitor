@@ -9,7 +9,13 @@ from collections.abc import Callable, Iterable
 import httpx
 
 from mediascanmonitor.config.runtime import FolderRoute, RuntimeConfig, ServerRuntime
-from mediascanmonitor.db.models import DebounceMode, ScanMode, ServerType, WebhookPreset
+from mediascanmonitor.db.models import (
+    DebounceMode,
+    FsEventType,
+    ScanMode,
+    ServerType,
+    WebhookPreset,
+)
 from mediascanmonitor.pipeline.events import ScanRequest
 from mediascanmonitor.servers.base import ServerAdapter, TestResult, TriggerResult
 
@@ -91,6 +97,7 @@ def make_route(
     library_id: str,
     extensions: Iterable[str] = (),
     scan_mode: ScanMode = ScanMode.targeted,
+    event_types: frozenset[FsEventType] = frozenset(FsEventType),
 ) -> FolderRoute:
     return FolderRoute(
         server_id=server_id,
@@ -99,6 +106,7 @@ def make_route(
         extensions=frozenset(extensions),
         library_id=library_id,
         scan_mode=scan_mode,
+        event_types=event_types,
     )
 
 
