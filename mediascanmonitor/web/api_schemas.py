@@ -15,10 +15,12 @@ from pydantic import BaseModel
 from mediascanmonitor.db.models import (
     DebounceMode,
     Folder,
+    FsEventType,
     ScanMode,
     Server,
     ServerType,
     WebhookPreset,
+    parse_event_types,
 )
 from mediascanmonitor.observ.events_bus import EventRecord
 from mediascanmonitor.servers.registry import get_adapter_class
@@ -65,6 +67,7 @@ class ServerRead(BaseModel):
     webhook_headers_json: str | None
     webhook_body_template: str | None
     webhook_payload_preset: WebhookPreset
+    event_types: list[FsEventType]
     folders: list[FolderRead]
 
     @classmethod
@@ -88,6 +91,7 @@ class ServerRead(BaseModel):
             webhook_headers_json=server.webhook_headers_json,
             webhook_body_template=server.webhook_body_template,
             webhook_payload_preset=server.webhook_payload_preset,
+            event_types=[t for t in FsEventType if t in parse_event_types(server.event_types)],
             folders=[FolderRead.from_model(f) for f in folders],
         )
 
