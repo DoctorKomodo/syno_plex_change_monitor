@@ -315,3 +315,11 @@ def test_server_detail_preselects_saved_event_types(
     assert re.search(r'name="event_types" value="deleted"[^>]*\bchecked\b', body)
     assert not re.search(r'name="event_types" value="moved_to"[^>]*\bchecked\b', body)
     assert not re.search(r'name="event_types" value="moved_from"[^>]*\bchecked\b', body)
+
+
+def test_event_type_labels_cover_every_fs_event_type() -> None:
+    from mediascanmonitor.db.models import FsEventType
+    from mediascanmonitor.web.pages import _EVENT_TYPE_LABELS
+
+    assert set(_EVENT_TYPE_LABELS) == set(FsEventType)
+    assert list(_EVENT_TYPE_LABELS) == list(FsEventType)  # pins checkbox order to declaration order

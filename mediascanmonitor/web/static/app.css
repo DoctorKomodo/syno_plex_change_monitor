@@ -588,6 +588,7 @@ pre code { border: 0; background: none; padding: 0; }
 .token-clear-fallback { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
 
 .toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 1rem; }
+.field-event-types .toggles { margin-top: 0; }
 .toggle {
   display: inline-flex;
   align-items: center;
