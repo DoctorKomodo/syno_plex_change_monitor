@@ -296,7 +296,8 @@ def test_new_server_form_renders_all_four_event_type_checkboxes_checked(
 
 
 def test_server_detail_preselects_saved_event_types(
-    auth_client: httpx.Client, repo  # type: ignore[no-untyped-def]
+    auth_client: httpx.Client,
+    repo,  # type: ignore[no-untyped-def]
 ) -> None:
     import re
 

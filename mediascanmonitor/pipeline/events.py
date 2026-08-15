@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from mediascanmonitor.db.models import FsEventType, ScanMode
 
-__all__ = ["FsEventType", "FsEvent", "ScanRequest"]
+__all__ = ["FsEvent", "FsEventType", "ScanRequest"]
 
 
 @dataclass(frozen=True, slots=True)
