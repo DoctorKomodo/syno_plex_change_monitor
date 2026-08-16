@@ -14,7 +14,7 @@ import structlog
 
 from mediascanmonitor.config.runtime import RuntimeConfig, build_runtime_config
 from mediascanmonitor.db.repo import Repo
-from mediascanmonitor.observ.events_bus import EventRecord, EventsBus
+from mediascanmonitor.observ.events_bus import EventRecord, EventsBus, RawEventRecord, RawEventsBus
 from mediascanmonitor.pipeline.debounce import Debouncer
 from mediascanmonitor.pipeline.dispatcher import Dispatcher
 from mediascanmonitor.pipeline.events import FsEvent, ScanRequest
@@ -44,10 +44,12 @@ class Engine:
         *,
         watcher: WatcherBackend | None = None,
         events_bus: EventsBus | None = None,
+        raw_events_bus: RawEventsBus | None = None,
     ) -> None:
         self._repo = repo
         self._watcher: WatcherBackend | None = watcher
         self._events_bus = events_bus
+        self._raw_events_bus = raw_events_bus
         self._config: RuntimeConfig | None = None
         self._dispatcher: Dispatcher | None = None
         self._debouncer: Debouncer | None = None
@@ -272,5 +274,17 @@ class Engine:
         debouncer = self._debouncer
         if config is None or debouncer is None:
             return
-        for req in route(event, config):
+        reqs = list(route(event, config))
+        raw_bus = self._raw_events_bus
+        if raw_bus is not None:
+            raw_bus.publish(
+                RawEventRecord(
+                    ts=datetime.now(UTC).isoformat(),
+                    event_type=event.event_type.value,
+                    path=event.path,
+                    is_dir=event.is_dir,
+                    matched=bool(reqs),
+                )
+            )
+        for req in reqs:
             await debouncer.submit(req)

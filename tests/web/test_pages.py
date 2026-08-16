@@ -126,8 +126,8 @@ def test_server_detail_404_for_missing(auth_client: httpx.Client) -> None:
     assert auth_client.get("/servers/9999").status_code == 404
 
 
-def test_settings_page_has_gate_toggle(auth_client: httpx.Client) -> None:
-    resp = auth_client.get("/settings")
+def test_dashboard_has_gate_toggle(auth_client: httpx.Client) -> None:
+    resp = auth_client.get("/")
     assert resp.status_code == 200
     assert 'name="inotify_gate"' in resp.text
     assert "Re-check" in resp.text
@@ -136,11 +136,11 @@ def test_settings_page_has_gate_toggle(auth_client: httpx.Client) -> None:
 def test_events_page_opens_stream(auth_client: httpx.Client) -> None:
     resp = auth_client.get("/events")
     assert resp.status_code == 200
-    assert "/events/stream" in resp.text  # the page wires the SSE source
+    assert "/events/raw/stream" in resp.text  # the page wires the raw-event SSE source
 
 
 def test_pages_redirect_when_anon(client: httpx.Client) -> None:
-    for path in ("/servers", "/settings", "/events"):
+    for path in ("/servers", "/events"):
         r = client.get(path, follow_redirects=False)
         assert r.status_code == 303, path
 

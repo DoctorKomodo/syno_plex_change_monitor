@@ -64,3 +64,47 @@ class EventsBus:
                 yield await queue.get()
         finally:
             self._subscribers.discard(queue)
+
+
+@dataclass(frozen=True, slots=True)
+class RawEventRecord:
+    ts: str  # ISO-8601 UTC
+    event_type: str  # FsEventType value
+    path: str
+    is_dir: bool
+    matched: bool  # True if routing produced at least one subscriber for this event
+
+
+class RawEventsBus:
+    """Same ring-buffer/fan-out shape as ``EventsBus``, one level earlier in the pipeline:
+    the raw watcher event, published from ``Engine._handle_event`` before routing/debounce
+    collapse it into per-server ``ScanRequest``s. Kept as its own class rather than sharing
+    a generic base — the two record types are unrelated domains that may drift independently.
+    """
+
+    def __init__(self, *, capacity: int = 200) -> None:
+        self._buffer: deque[RawEventRecord] = deque(maxlen=capacity)
+        self._subscribers: set[asyncio.Queue[RawEventRecord]] = set()
+
+    def publish(self, record: RawEventRecord) -> None:
+        self._buffer.append(record)
+        for queue in self._subscribers:
+            if queue.full():
+                with contextlib.suppress(asyncio.QueueEmpty):  # pragma: no cover
+                    queue.get_nowait()
+            queue.put_nowait(record)
+
+    def recent(self, limit: int = 50) -> list[RawEventRecord]:
+        if limit <= 0:
+            return []
+        records = list(self._buffer)
+        return records[-limit:]
+
+    async def subscribe(self) -> AsyncIterator[RawEventRecord]:
+        queue: asyncio.Queue[RawEventRecord] = asyncio.Queue(maxsize=_SUBSCRIBER_QUEUE_MAXSIZE)
+        self._subscribers.add(queue)
+        try:
+            while True:
+                yield await queue.get()
+        finally:
+            self._subscribers.discard(queue)

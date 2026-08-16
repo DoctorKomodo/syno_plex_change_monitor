@@ -10,7 +10,7 @@ from mediascanmonitor import engine as engine_module
 from mediascanmonitor.db.models import DebounceMode, ScanMode
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.engine import Engine, EngineState
-from mediascanmonitor.observ.events_bus import EventsBus
+from mediascanmonitor.observ.events_bus import EventsBus, RawEventsBus
 from mediascanmonitor.pipeline.events import FsEvent, FsEventType
 from mediascanmonitor.watcher.watch_limit import WatchLimitStatus
 from tests._helpers import (
@@ -397,6 +397,66 @@ async def test_dispatch_publishes_event_record_when_bus_present(
     assert rec.ok is True
     assert rec.status_code == 200
     assert rec.ts.endswith("+00:00")  # ISO-8601 UTC, timezone-aware
+
+
+async def test_handle_event_publishes_raw_record_matched(
+    monkeypatch: pytest.MonkeyPatch, stub_repo: Repo
+) -> None:
+    created: dict[int, RecordingAdapter] = {}
+    _patch_factories(monkeypatch, created)
+
+    server = make_server_runtime(1, name="plex", debounce=DebounceMode.off)
+    route = make_route(1, name="plex", path="/data/tv", library_id="2", extensions={"mkv"})
+    monkeypatch.setattr(
+        engine_module, "build_runtime_config", lambda repo: make_config([route], [server])
+    )
+
+    raw_bus = RawEventsBus()
+    watcher = FakeWatcher()
+    engine = Engine(stub_repo, watcher=watcher, raw_events_bus=raw_bus)
+    await watcher.emit(
+        FsEvent(path="/data/tv/Shoresy/ep1.mkv", event_type=FsEventType.created, is_dir=False)
+    )
+    await watcher.aclose()
+    await engine.start()
+    await engine.aclose()
+
+    records = raw_bus.recent()
+    assert len(records) == 1
+    rec = records[0]
+    assert rec.event_type == FsEventType.created.value
+    assert rec.path == "/data/tv/Shoresy/ep1.mkv"
+    assert rec.is_dir is False
+    assert rec.matched is True
+    assert rec.ts.endswith("+00:00")  # ISO-8601 UTC, timezone-aware
+
+
+async def test_handle_event_publishes_raw_record_unmatched(
+    monkeypatch: pytest.MonkeyPatch, stub_repo: Repo
+) -> None:
+    created: dict[int, RecordingAdapter] = {}
+    _patch_factories(monkeypatch, created)
+
+    server = make_server_runtime(1, name="plex", debounce=DebounceMode.off)
+    route = make_route(1, name="plex", path="/data/tv", library_id="2", extensions={"mkv"})
+    monkeypatch.setattr(
+        engine_module, "build_runtime_config", lambda repo: make_config([route], [server])
+    )
+
+    raw_bus = RawEventsBus()
+    watcher = FakeWatcher()
+    engine = Engine(stub_repo, watcher=watcher, raw_events_bus=raw_bus)
+    await watcher.emit(
+        FsEvent(path="/data/tv/Shoresy/poster.jpg", event_type=FsEventType.created, is_dir=False)
+    )
+    await watcher.aclose()
+    await engine.start()
+    await engine.aclose()
+
+    records = raw_bus.recent()
+    assert len(records) == 1
+    assert records[0].matched is False
+    assert created[1].calls == []  # unmatched: never reached the adapter
 
 
 # ---------------------------------------------------------------------------

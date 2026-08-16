@@ -3,10 +3,12 @@
   <div class="nav-links">
     <a href="/">Dashboard</a>
     <a href="/servers">Servers</a>
-    <a href="/settings">Settings</a>
     <a href="/events">Events</a>
   </div>
-  <form action="/auth/logout" method="post" class="nav-logout">
-    <button type="submit">Log out</button>
-  </form>
+  <div class="nav-account">
+    <a class="ghost" href="/account/password">Change password</a>
+    <form action="/auth/logout" method="post" class="nav-logout">
+      <button type="submit">Log out</button>
+    </form>
+  </div>
 </nav>

@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.engine import Engine
-from mediascanmonitor.observ.events_bus import EventsBus
+from mediascanmonitor.observ.events_bus import EventsBus, RawEventsBus
 
 # Import the auth MODULE, not the `is_password_set` symbol: web/app.py imports auth, auth's
 # router imports this deps module, and a `from …auth import is_password_set` here would bind a
@@ -35,6 +35,11 @@ def get_engine(request: Request) -> Engine:
 
 def get_events_bus(request: Request) -> EventsBus:
     bus: EventsBus = request.app.state.events_bus
+    return bus
+
+
+def get_raw_events_bus(request: Request) -> RawEventsBus:
+    bus: RawEventsBus = request.app.state.raw_events_bus
     return bus
 
 

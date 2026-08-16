@@ -284,7 +284,7 @@ In DSM → Task Scheduler → Create → Triggered task → Boot-up, as root:
 echo 131072 > /proc/sys/fs/inotify/max_user_watches
 ```
 
-After raising the limit, click **Re-check** on the Settings page in the UI. The engine will
+After raising the limit, click **Re-check watch limit** on the Dashboard. The engine will
 resume watching automatically.
 
 ### Option B — opt-in init sidecar (privileged, host-global)
@@ -305,7 +305,7 @@ preferred.
 
 ### "No events ever seen"
 
-The app is running and healthy but no scan events appear in the Events feed:
+The app is running and healthy but no scan events appear on the Dashboard's Signal panel:
 
 1. **Check that the media bind-mount is local storage.** inotify events do not fire on
    network-mounted filesystems (NFS, SMB). The bind-mount source must be a local path on the
@@ -318,7 +318,11 @@ The app is running and healthy but no scan events appear in the Events feed:
 3. **Check `/config` is writable.** If the startup log contains a permission error, the app
    could not create `app.db` or `secret.key`. Fix: `chown -R 1000:1000 ./config` on the host.
 
-4. **Check the folder path and extensions.** On the server detail page, verify the folder path
+4. **Check the folder path and extensions.** Open the Events page — it streams every raw
+   filesystem event the watcher sees, before routing. If a change never shows up there at all,
+   the watcher isn't seeing the file (bind-mount/permission problem, see above). If it shows up
+   but dimmed as `[no match]`, the event reached the app but matched no server's watched folder,
+   extension list, or subscribed event type — on the server detail page, verify the folder path
    matches the container's bind-mount path (e.g. `/data/media/tv`, not the host path
    `/volume1/media/tv`), and that the file extensions list includes the type of files being
    added.

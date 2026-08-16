@@ -21,7 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from mediascanmonitor.config.defaults import EXTENSION_PRESETS
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.engine import Engine
-from mediascanmonitor.observ.events_bus import EventsBus
+from mediascanmonitor.observ.events_bus import EventsBus, RawEventsBus
 from mediascanmonitor.web import auth
 from mediascanmonitor.web.api import events as api_events
 from mediascanmonitor.web.api import folders as api_folders
@@ -37,6 +37,7 @@ def create_app(
     repo: Repo,
     engine: Engine,
     events_bus: EventsBus,
+    raw_events_bus: RawEventsBus,
     *,
     session_secret: str,
 ) -> FastAPI:
@@ -45,6 +46,7 @@ def create_app(
     app.state.repo = repo
     app.state.engine = engine
     app.state.events_bus = events_bus
+    app.state.raw_events_bus = raw_events_bus
     app.state.templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
     # Offered to the folder editor's extension chip-picker (see _folder_rows_script.html).
     app.state.templates.env.globals["extension_presets"] = EXTENSION_PRESETS
