@@ -5,23 +5,26 @@
 <h1>Live events</h1>
 <section class="card wire-card">
   <h2>Signal <span class="live">live</span></h2>
-  <p class="muted">Streaming dispatch results from <code>/events/stream</code> — newest at top.</p>
+  <p class="muted">Raw filesystem events straight off the watcher, from <code>/events/raw/stream</code>
+    — before routing, filtering, or debounce. Newest at top; dimmed rows didn't match any server's
+    watched folders, extensions, or subscribed event types.</p>
   <ul id="event-feed" class="wire"></ul>
 </section>
 <script>
   // 6-line EventSource feed (no htmx SSE extension vendored — keeps the static surface to one file).
   (function () {
     const feed = document.getElementById("event-feed");
-    const source = new EventSource("/events/stream");
+    const source = new EventSource("/events/raw/stream");
     source.onmessage = function (e) {
       const r = JSON.parse(e.data);
       const li = document.createElement("li");
-      const ok = r.ok ? "ok" : "fail";
-      li.className = "event event-" + ok;
+      li.className = "event" + (r.matched ? "" : " event-unmatched");
+      const kind = r.is_dir ? "dir" : "file";
       // r.ts is a UTC ISO timestamp; render it in the viewer's local timezone.
-      li.textContent = new Date(r.ts).toLocaleString() + "  [" + r.server_name + "] " + r.event_type + " " + r.file_path +
-        "  -> " + (r.ok ? "ok" : "FAIL") + (r.detail ? " (" + r.detail + ")" : "");
+      li.textContent = new Date(r.ts).toLocaleString() + "  " + r.event_type + " (" + kind + ")  " +
+        r.path + (r.matched ? "" : "  [no match]");
       feed.insertBefore(li, feed.firstChild);
+      while (feed.children.length > 50) { feed.removeChild(feed.lastChild); }
     };
   })();
 </script>

@@ -4,34 +4,8 @@
 {% include "_nav.html" %}
 <h1>Dashboard</h1>
 
-<div class="grid-2">
-  <section class="card">
-    <h2>Engine</h2>
-    <p class="readout"><span class="state state-{{ engine_state }}">{{ engine_state }}</span></p>
-    <p class="metric"><span class="metric-num">{{ enabled_server_count }}</span><span class="metric-den">of {{ server_count }} servers enabled</span></p>
-    <p class="kv">inotify gate <strong>{{ inotify_gate }}</strong></p>
-  </section>
-
-  <section class="card">
-    <h2>inotify watch limit</h2>
-    {% if watch is none %}
-      <p class="muted">No watches configured yet — nothing to gate.</p>
-    {% else %}
-      {% set pct = ((100 * watch.needed / watch.current) if watch.current else 0) %}
-      <div class="gauge {{ 'gauge-ok' if watch.ok else 'gauge-warn' }}">
-        <div class="gauge-track"><div class="gauge-fill" style="width: {{ [pct, 100] | min | round(0, 'floor') | int }}%"></div></div>
-        <p class="gauge-label"><span>{{ watch.dirs }} watched</span><span>{{ watch.current }} limit</span></p>
-      </div>
-      {% if watch.ok %}
-        <p class="ok">Limit is sufficient — {{ watch.current }} ≥ {{ watch.needed }} needed.</p>
-      {% else %}
-        <p class="warn">Limit too low — {{ watch.needed }} needed. Raise it on the host to the
-          recommended {{ watch.recommended }}, then re-check on <a href="/settings">Settings</a>:</p>
-        <pre>echo {{ watch.recommended }} &gt; /proc/sys/fs/inotify/max_user_watches</pre>
-        <pre>sysctl -w fs.inotify.max_user_watches={{ watch.recommended }}</pre>
-      {% endif %}
-    {% endif %}
-  </section>
+<div id="dashboard-status">
+  {% include "_dashboard_status.html" %}
 </div>
 
 <section class="card wire-card">

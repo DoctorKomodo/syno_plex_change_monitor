@@ -15,7 +15,7 @@
         <form class="channel-del" hx-post="/ui/servers/{{ s.id }}/delete"
               hx-target="#server-list" hx-swap="innerHTML"
               hx-confirm="Delete {{ s.name }}? This removes its folders too.">
-          <button type="submit" class="ghost-danger">Remove</button>
+          <button type="submit" class="ghost ghost-danger">Remove</button>
         </form>
       </div>
 

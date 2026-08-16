@@ -41,7 +41,7 @@ from mediascanmonitor.db.models import (
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.db.schemas import FolderCreate, ServerCreate, ServerUpdate
 from mediascanmonitor.engine import Engine
-from mediascanmonitor.observ.events_bus import EventRecord, EventsBus
+from mediascanmonitor.observ.events_bus import EventRecord, EventsBus, RawEventRecord, RawEventsBus
 from mediascanmonitor.servers import registry
 from mediascanmonitor.servers.base import LibraryListResult
 from mediascanmonitor.servers.webhook import HTTP_METHODS
@@ -50,6 +50,7 @@ from mediascanmonitor.web.api_schemas import SERVER_TYPE_SPECS, ServerRead, Serv
 from mediascanmonitor.web.deps import (
     get_engine,
     get_events_bus,
+    get_raw_events_bus,
     get_repo,
     get_templates,
     require_page_auth,
@@ -91,6 +92,31 @@ async def events_stream(
 ) -> StreamingResponse:
     return StreamingResponse(
         _event_generator(request, bus),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _raw_sse_frame(record: RawEventRecord) -> str:
+    """Serialize a RawEventRecord as one SSE ``data:`` frame."""
+    return f"data: {json.dumps(dataclasses.asdict(record))}\n\n"
+
+
+async def _raw_event_generator(request: Request, bus: RawEventsBus) -> AsyncIterator[str]:
+    for record in bus.recent():
+        yield _raw_sse_frame(record)
+    async for record in bus.subscribe():
+        if await request.is_disconnected():
+            break
+        yield _raw_sse_frame(record)
+
+
+@router.get("/events/raw/stream")
+async def events_raw_stream(
+    request: Request, bus: RawEventsBus = Depends(get_raw_events_bus)
+) -> StreamingResponse:
+    return StreamingResponse(
+        _raw_event_generator(request, bus),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -145,7 +171,7 @@ def _type_specs() -> dict[str, dict[str, bool | str]]:
 
 
 async def _status_context(repo: Repo, engine: Engine) -> dict[str, Any]:
-    """Shared dashboard/settings status context — same primitives as /api/status (§H)."""
+    """Shared dashboard status context — same primitives as /api/status (§H)."""
     gate = await asyncio.to_thread(repo.get_setting, "inotify_gate")
     servers = await asyncio.to_thread(repo.list_servers)
     limit = engine.watch_limit
@@ -248,17 +274,6 @@ async def server_detail(
             "webhook_methods": list(HTTP_METHODS),
         },
     )
-
-
-@router.get("/settings")
-async def settings_page(
-    request: Request,
-    repo: Repo = Depends(get_repo),
-    engine: Engine = Depends(get_engine),
-    templates: Jinja2Templates = Depends(get_templates),
-) -> Response:
-    context = await _status_context(repo, engine)
-    return templates.TemplateResponse(request=request, name="settings.html", context=context)
 
 
 @router.get("/events")
@@ -653,7 +668,9 @@ async def ui_settings(
     await asyncio.to_thread(repo.set_setting, "inotify_gate", inotify_gate)
     await rebuild_engine(engine)  # flipping to off can recover a blocked engine (§H/§I)
     context = await _status_context(repo, engine)
-    return templates.TemplateResponse(request=request, name="_status.html", context=context)
+    return templates.TemplateResponse(
+        request=request, name="_dashboard_status.html", context=context
+    )
 
 
 @router.post("/ui/recheck")
@@ -665,4 +682,6 @@ async def ui_recheck(
 ) -> Response:
     await rebuild_engine(engine)  # re-evaluate the gate after an out-of-band host limit change (§H)
     context = await _status_context(repo, engine)
-    return templates.TemplateResponse(request=request, name="_status.html", context=context)
+    return templates.TemplateResponse(
+        request=request, name="_dashboard_status.html", context=context
+    )

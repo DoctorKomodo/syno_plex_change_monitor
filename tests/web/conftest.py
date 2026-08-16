@@ -21,7 +21,7 @@ from mediascanmonitor.db.crypto import SecretBox
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.db.session import init_db, session_factory
 from mediascanmonitor.engine import EngineState
-from mediascanmonitor.observ.events_bus import EventsBus
+from mediascanmonitor.observ.events_bus import EventsBus, RawEventsBus
 from mediascanmonitor.watcher.watch_limit import WatchLimitStatus
 from mediascanmonitor.web.app import create_app
 from mediascanmonitor.web.auth import set_password
@@ -59,14 +59,23 @@ def events_bus() -> EventsBus:
 
 
 @pytest.fixture
+def raw_events_bus() -> RawEventsBus:
+    return RawEventsBus()
+
+
+@pytest.fixture
 def engine() -> FakeEngine:
     return FakeEngine()
 
 
 @pytest.fixture
-def app(repo: Repo, engine: FakeEngine, events_bus: EventsBus):  # type: ignore[no-untyped-def]
+def app(  # type: ignore[no-untyped-def]
+    repo: Repo, engine: FakeEngine, events_bus: EventsBus, raw_events_bus: RawEventsBus
+):
     # FakeEngine is a structural stand-in for engine.Engine; create_app only stores it.
-    return create_app(repo, engine, events_bus, session_secret=SESSION_SECRET)  # type: ignore[arg-type]
+    return create_app(  # type: ignore[arg-type]
+        repo, engine, events_bus, raw_events_bus, session_secret=SESSION_SECRET
+    )
 
 
 @pytest.fixture

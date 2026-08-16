@@ -100,7 +100,14 @@ a:hover { text-decoration: underline; text-underline-offset: 2px; }
 }
 .nav-links a:hover { color: var(--text); border-color: var(--signal); text-decoration: none; }
 
-.nav-logout { margin-left: auto; margin-top: 0; }
+.nav-account {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nav-logout { margin-top: 0; }
 .nav-logout button {
   font: 600 0.72rem/1 var(--mono);
   text-transform: uppercase;
@@ -395,17 +402,20 @@ pre code { border: 0; background: none; padding: 0; }
 .channel-state.is-live::before { box-shadow: 0 0 8px var(--ok); animation: pulse 1.8s ease-in-out infinite; }
 .channel-state.is-muted { color: var(--faint); }
 
-/* Delete is demoted: quiet by default, only reddens on intent. */
+/* Quiet by default: a low-emphasis action that shouldn't compete with the primary button.
+   .ghost-danger reddens on intent (delete); plain .ghost just brightens (e.g. account nav). */
 .channel-del { margin-left: auto; }
-.ghost-danger {
+.ghost {
   font: 600 0.66rem var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.32rem 0.6rem;
+  border-radius: var(--r-sm);
   color: var(--faint);
   background: transparent;
   border: 1px solid var(--line);
 }
+.ghost:hover { color: var(--text); background: var(--panel-2); border-color: var(--muted); text-decoration: none; }
 .ghost-danger:hover { color: #ffd2d5; background: rgba(242, 109, 116, 0.12); border-color: rgba(242, 109, 116, 0.5); }
 
 .channel-route {
@@ -911,6 +921,11 @@ pre code { border: 0; background: none; padding: 0; }
 .event-fail { color: #f6b9bd; }
 .event-fail::before { background: var(--err); box-shadow: 0 0 8px var(--err); }
 
+/* Raw event feed only: seen by the watcher but routed to no server (outside every watched
+   folder/extension, or the event type isn't subscribed) — muted, not an error. */
+.event-unmatched { color: var(--faint); }
+.event-unmatched::before { background: var(--faint); box-shadow: none; }
+
 @keyframes flashin {
   from { background: rgba(63, 216, 228, 0.14); }
   to   { background: transparent; }
@@ -939,11 +954,20 @@ body.auth .error { width: 100%; max-width: 380px; margin: 0; }
   color: var(--text);
 }
 .auth-brand .sep { color: var(--signal); }
-.auth-card h1 { margin: 0 0 0.3rem; font-size: 1.3rem; }
-.auth-card form { margin-top: 0.4rem; }
-.auth-card button[type="submit"] { width: 100%; margin-top: 0.3rem; padding: 0.6rem; }
+.auth-card h1, .password-card h1 { margin: 0 0 0.3rem; font-size: 1.3rem; }
+.auth-card form, .password-card form { margin-top: 0.4rem; }
+.auth-card button[type="submit"], .password-card button[type="submit"] {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.6rem;
+}
 .auth-card .danger { width: 100%; }
 .auth-links { text-align: center; font-size: 0.9rem; margin-top: 0.4rem; }
+
+/* Same card language as the auth screens, but for the Change-password form reached from
+   within the app (nav visible) — it can't lean on body.auth's flex centering, so it
+   centers itself with margin: auto instead. */
+.password-card { width: 100%; max-width: 380px; margin: 1.6rem auto; }
 
 /* ---------------------------------------------------------------- A11y/motion */
 

@@ -17,7 +17,13 @@ async def test_serve_web_starts_engine_and_shuts_down_cleanly(
     created: dict[str, _FakeEngine] = {}
 
     class _FakeEngine:
-        def __init__(self, repo: Repo, *, events_bus: object | None = None) -> None:
+        def __init__(
+            self,
+            repo: Repo,
+            *,
+            events_bus: object | None = None,
+            raw_events_bus: object | None = None,
+        ) -> None:
             self.closed = False
             self.started = False
             self.state = EngineState.running
@@ -30,8 +36,10 @@ async def test_serve_web_starts_engine_and_shuts_down_cleanly(
         async def aclose(self) -> None:
             self.closed = True
 
-    def make_engine(repo: Repo, *, events_bus: object | None = None) -> _FakeEngine:
-        eng = _FakeEngine(repo, events_bus=events_bus)
+    def make_engine(
+        repo: Repo, *, events_bus: object | None = None, raw_events_bus: object | None = None
+    ) -> _FakeEngine:
+        eng = _FakeEngine(repo, events_bus=events_bus, raw_events_bus=raw_events_bus)
         created["engine"] = eng
         return eng
 

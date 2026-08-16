@@ -16,7 +16,7 @@ import uvicorn
 
 from mediascanmonitor.db.repo import Repo
 from mediascanmonitor.engine import Engine
-from mediascanmonitor.observ.events_bus import EventsBus
+from mediascanmonitor.observ.events_bus import EventsBus, RawEventsBus
 from mediascanmonitor.web.app import create_app
 from mediascanmonitor.web.auth import bootstrap_password
 
@@ -34,9 +34,10 @@ async def serve_web(
     stop = stop_event if stop_event is not None else asyncio.Event()
 
     bus = EventsBus()
-    engine = Engine(repo, events_bus=bus)
+    raw_bus = RawEventsBus()
+    engine = Engine(repo, events_bus=bus, raw_events_bus=raw_bus)
     await asyncio.to_thread(bootstrap_password, repo)  # never logs the value
-    app = create_app(repo, engine, bus, session_secret=session_secret)
+    app = create_app(repo, engine, bus, raw_bus, session_secret=session_secret)
 
     config = uvicorn.Config(app, host=host, port=port, log_config=None)
     server = uvicorn.Server(config)

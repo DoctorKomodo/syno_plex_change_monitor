@@ -29,7 +29,7 @@
         <input type="text" name="folder-{{ loop.index0 }}-extensions" value="{{ f.extensions | join(', ') }}" placeholder="mkv, mp4" aria-label="Extensions">
       </div>
       <label class="folder-on"><input type="checkbox" name="folder-{{ loop.index0 }}-enabled" {% if f.enabled %}checked{% endif %}><span class="sr-only">Enabled</span></label>
-      <button type="button" class="ghost-danger nf-remove" data-folder-remove>Remove</button>
+      <button type="button" class="ghost ghost-danger nf-remove" data-folder-remove>Remove</button>
     </div>
     {% else %}
     <div class="nf-row" data-folder-row>
@@ -49,7 +49,7 @@
         <input type="text" name="folder-0-extensions" placeholder="mkv, mp4" aria-label="Extensions">
       </div>
       <label class="folder-on"><input type="checkbox" name="folder-0-enabled" checked><span class="sr-only">Enabled</span></label>
-      <button type="button" class="ghost-danger nf-remove" data-folder-remove>Remove</button>
+      <button type="button" class="ghost ghost-danger nf-remove" data-folder-remove>Remove</button>
     </div>
     {% endfor %}
   </div>
@@ -72,7 +72,7 @@
         <input type="text" name="folder-__I__-extensions" placeholder="mkv, mp4" aria-label="Extensions">
       </div>
       <label class="folder-on"><input type="checkbox" name="folder-__I__-enabled" checked><span class="sr-only">Enabled</span></label>
-      <button type="button" class="ghost-danger nf-remove" data-folder-remove>Remove</button>
+      <button type="button" class="ghost ghost-danger nf-remove" data-folder-remove>Remove</button>
     </div>
   </template>
   {% include "_folder_picker.html" %}
